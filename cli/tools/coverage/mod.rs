@@ -39,11 +39,13 @@ use crate::sys::CliSys;
 use crate::tools::test::is_supported_test_path;
 use crate::util::text_encoding::source_map_from_code;
 
+mod badge;
 mod ignore_directives;
 mod merge;
 mod range_tree;
 pub mod reporter;
 mod util;
+use badge::generate_coverage_badge;
 use merge::ProcessCoverage;
 
 #[derive(Debug, Clone)]
@@ -616,6 +618,28 @@ pub fn cover_files(
   for reporter in reporters {
     reporter.done(&coverage_root, &file_reports);
   }
+
+  let total_lines: u8 = file_reports
+    .iter()
+    .map(|(report, _)| report.found_lines.len())
+    .sum();
+  let covered_lines: u8 = file_reports
+    .iter()
+    .map(|(report, _)| {
+      report
+        .found_lines
+        .iter()
+        .filter(|(_, count)| *count > 0)
+        .count()
+    })
+    .sum();
+  let coverage_percentage = if total_lines > 0 {
+    (covered_lines * 100 / total_lines)
+  } else {
+    0
+  };
+
+  generate_coverage_badge(&coverage_root, coverage_percentage);
 
   Ok(())
 }
